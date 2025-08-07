@@ -1,0 +1,236 @@
+openapi: 3.1.0
+info:
+  title: Local Business Search API
+  description: >
+    API to search for local businesses and make reservations or appoinments. Search results follow the 
+    [Schema.org LocalBusiness] (https://schema.org/LocalBusiness) format, including
+    properties inherited from Thing, Place, and Organization.
+    The API call /makeAppointment allows clients to make a reservation or appointment by submitting detailed information 
+    as defined in the [Schema.org Reservation](https://schema.org/Reservation) model. 
+    This includes details like reservation number, booking time, party size, under name, and provider.
+  version: 1.0.4
+servers:
+  - url: https://tamina.app/api
+paths:
+  /searchLocalBusiness:
+    get:
+      operationId: searchLocalBusiness
+      summary: Search for local businesses
+      description: >
+        Search for local businesses by name, type, location, postal code, or geographic coordinates.
+        Returns results formatted using the Schema.org LocalBusiness structure.
+      parameters:
+        - name: searchTerm
+          in: query
+          description: The name or partial name or type or city or region of the local business to search for.
+          required: true
+          schema:
+            type: string
+        - name: latitude
+          in: query
+          description: Latitude used for geo-based proximity search.
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: longitude
+          in: query
+          description: Longitude used for geo-based proximity search.
+          required: false
+          schema:
+            type: number
+            format: float
+      responses:
+        "200":
+          description: A list of matching local businesses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LocalBusiness"
+        "400":
+          description: Invalid query parameters
+        "500":
+          description: Internal server error
+  /requestAppointment:
+    post:
+      operationId: requestAppointment
+      summary: Request an appointment or a reservation
+      description: Submit all reservation details to create a new reservation based on Schema.org's Reservation model.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - bookingTime
+                - underName
+                - reservationFor
+              properties:
+                underName:
+                  type: object
+                  description: Person or organization the reservation is under.
+                  required: [name]
+                  properties:
+                    name:
+                      type: string
+                      description: Name of the person or organization making the reservation.
+                    email:
+                      type: string
+                      format: email
+                      description: Email of the reserving person.
+                    telephone:
+                      type: string
+                      description: Contact phone number.
+                reservationFor:
+                  type: object
+                  description: The service or event this reservation is for.
+                  required: [name]
+                  properties:
+                    name:
+                      type: string
+                      description: Name of the service/event/restaurant.
+                    startTime:
+                      type: string
+                      format: date-time
+                      description: Start time of the reservation.
+                    endTime:
+                      type: string
+                      format: date-time
+                      description: End time of the reservation.
+                    location:
+                      type: object
+                      description: Physical location of the reserved entity.
+                      properties:
+                        name:
+                          type: string
+                          description: Name of the place (e.g., restaurant name).
+                        address:
+                          type: string
+                          description: Street address of the location.
+                bookingTime:
+                  type: string
+                  format: date-time
+                  description: The time the reservation was made.
+      responses:
+        '200':
+          description: Reservation successfully created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  reservationId:
+                    type: string
+                    example: resv_abc123
+                  message:
+                    type: string
+                    example: Reservation confirmed successfully.
+        '400':
+          description: Invalid input data.
+        '500':
+          description: Server error while processing the reservation.
+components:
+  schemas:
+    LocalBusiness:
+      type: object
+      description: A local business, including restaurants, stores, doctors, etc., as defined by Schema.org.
+      properties:
+        "@context":
+          type: string
+          description: Schema.org context identifier (usually "https://schema.org").
+          example: https://schema.org
+        "@type":
+          type: string
+          description: The type of the resource, which should be "LocalBusiness".
+          example: LocalBusiness
+        name:
+          type: string
+          description: The name of the business.
+        description:
+          type: string
+          description: A short description of the business.
+        image:
+          type: string
+          format: uri
+          description: An image URL representing the business (e.g. logo or storefront).
+        url:
+          type: string
+          format: uri
+          description: The business's homepage or profile URL.
+        telephone:
+          type: string
+          description: The phone number of the business.
+        email:
+          type: string
+          description: The email address of the business.
+        address:
+          type: object
+          description: The physical address of the business.
+          properties:
+            streetAddress:
+              type: string
+              description: The street address.
+            addressLocality:
+              type: string
+              description: The city or locality.
+            addressRegion:
+              type: string
+              description: The region (state, province, etc.).
+            postalCode:
+              type: string
+              description: Postal or ZIP code.
+            addressCountry:
+              type: string
+              description: The country (e.g. "US").
+        geo:
+          type: object
+          description: Geographic coordinates of the business location.
+          properties:
+            latitude:
+              type: number
+              format: float
+              description: The latitude of the location.
+            longitude:
+              type: number
+              format: float
+              description: The longitude of the location.
+        aggregateRating:
+          type: object
+          description: The average rating based on multiple reviews.
+          properties:
+            ratingValue:
+              type: number
+              description: The average rating score.
+            reviewCount:
+              type: integer
+              description: The number of reviews contributing to the rating.
+        hasMap:
+          type: string
+          format: uri
+          description: A URL to a map showing the business location.
+        identifier:
+          type: string
+          description: A unique identifier for the business, such as a tax ID or registration number.
+        openingHoursSpecification:
+          type: array
+          description: The hours of operation for the business.
+          items:
+            type: object
+            properties:
+              dayOfWeek:
+                type: string
+                description: The day of the week (e.g. "Monday").
+              opens:
+                type: string
+                format: time
+                description: Opening time in HH:mm format.
+              closes:
+                type: string
+                format: time
+                description: Closing time in HH:mm format.
